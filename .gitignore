@@ -54,7 +54,5 @@ rapport_scan_*.txt
 # Config local
 config.json
 
-# Keep profiles directory but ignore local changes
+# Profiles - include default profiles
 !profiles/
-profiles/*.profil
-!profiles/*.profil.example

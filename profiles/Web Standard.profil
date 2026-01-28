@@ -1,0 +1,18 @@
+# [PROFIL PAR DEFAUT]
+# Fichier de profil Port Scanner
+# Modifiable manuellement - les lignes commencant par # sont ignorees
+
+name = Web Standard
+
+# Liste des ports a scanner (separes par des virgules)
+ports = 80, 443, 8080, 8443
+
+# Liste des adresses IP cibles (une par ligne ou separees par des virgules)
+# Laisser vide pour definir les IPs dans l'interface
+ips =
+
+# Timeout en secondes pour chaque test de port
+timeout = 2
+
+# Nombre de threads paralleles
+threads = 20

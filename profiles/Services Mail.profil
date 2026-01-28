@@ -1,0 +1,18 @@
+# [PROFIL PAR DEFAUT]
+# Fichier de profil Port Scanner
+# Modifiable manuellement - les lignes commencant par # sont ignorees
+
+name = Services Mail
+
+# Liste des ports a scanner (separes par des virgules)
+ports = 25, 110, 143, 465, 587, 993, 995
+
+# Liste des adresses IP cibles (une par ligne ou separees par des virgules)
+# Laisser vide pour definir les IPs dans l'interface
+ips =
+
+# Timeout en secondes pour chaque test de port
+timeout = 2
+
+# Nombre de threads paralleles
+threads = 20
