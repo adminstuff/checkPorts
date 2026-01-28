@@ -805,12 +805,9 @@ if CLI_MODE:
     sys.exit(run_cli())
 
 
-# =============================================================================
-# CLASSES GUI (uniquement chargées si pas en mode CLI)
-# =============================================================================
+# Classes GUI - requièrent PyQt5 (non atteint si CLI_MODE a quitté plus haut).
 
 class ScanWorker(QThread):
-    """Thread de travail pour le scan de ports"""
     progress = pyqtSignal(int)
     result_ready = pyqtSignal(object)
     scan_complete = pyqtSignal()
