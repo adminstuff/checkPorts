@@ -8,6 +8,8 @@ Usage CLI:
     python port_scanner.py --cli --profile "Administration" --ip 10.0.0.0/24 --output rapport.json
 """
 
+VERSION = "0.6"
+
 import sys
 import socket
 import ipaddress
@@ -19,7 +21,7 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass, asdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-CLI_MODE = '--cli' in sys.argv or '-c' in sys.argv
+CLI_MODE = '--cli' in sys.argv or '-c' in sys.argv or '--version' in sys.argv or '-v' in sys.argv
 
 if not CLI_MODE:
     try:
@@ -694,6 +696,10 @@ Exemples:
     parser.add_argument('-c', '--cli', action='store_true',
                         help='Mode ligne de commande (sans interface graphique)')
 
+    parser.add_argument('-v', '--version', action='version',
+                        version=f'Port Scanner v{VERSION}',
+                        help='Afficher la version du programme')
+
     parser.add_argument('--ip', '-i', type=str,
                         help='Adresse(s) IP cible(s). Formats: IP unique, plage (1.1.1.1-1.1.1.10), CIDR (1.1.1.0/24)')
 
@@ -873,7 +879,7 @@ class PortScannerApp(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("Port Scanner - Outil de test de ports réseau")
+        self.setWindowTitle(f"Port Scanner v{VERSION} - Outil de test de ports réseau")
         self.setMinimumSize(1100, 750)
 
         central_widget = QWidget()
@@ -1113,42 +1119,21 @@ class PortScannerApp(QMainWindow):
         group = QGroupBox("Adresses IP cibles")
         layout = QVBoxLayout()
 
-        ip_single_layout = QHBoxLayout()
-        ip_single_layout.addWidget(QLabel("IP unique:"))
+        ip_input_layout = QHBoxLayout()
+        ip_input_layout.addWidget(QLabel("Cible(s):"))
         self.ip_input = QLineEdit()
-        self.ip_input.setPlaceholderText("ex: 192.168.1.1")
-        ip_single_layout.addWidget(self.ip_input)
+        self.ip_input.setPlaceholderText("IP, plage (1.1.1.1-10), CIDR (/24), ou liste (,)")
+        self.ip_input.returnPressed.connect(self.add_ips)
+        ip_input_layout.addWidget(self.ip_input)
         self.add_ip_btn = QPushButton("+")
         self.add_ip_btn.setFixedWidth(30)
-        self.add_ip_btn.clicked.connect(self.add_single_ip)
-        ip_single_layout.addWidget(self.add_ip_btn)
-        layout.addLayout(ip_single_layout)
+        self.add_ip_btn.clicked.connect(self.add_ips)
+        ip_input_layout.addWidget(self.add_ip_btn)
+        layout.addLayout(ip_input_layout)
 
-        ip_range_layout = QHBoxLayout()
-        ip_range_layout.addWidget(QLabel("Plage IP:"))
-        self.ip_range_start = QLineEdit()
-        self.ip_range_start.setPlaceholderText("192.168.1.1")
-        ip_range_layout.addWidget(self.ip_range_start)
-        ip_range_layout.addWidget(QLabel("-"))
-        self.ip_range_end = QLineEdit()
-        self.ip_range_end.setPlaceholderText("192.168.1.254")
-        ip_range_layout.addWidget(self.ip_range_end)
-        self.add_range_btn = QPushButton("+")
-        self.add_range_btn.setFixedWidth(30)
-        self.add_range_btn.clicked.connect(self.add_ip_range)
-        ip_range_layout.addWidget(self.add_range_btn)
-        layout.addLayout(ip_range_layout)
-
-        cidr_layout = QHBoxLayout()
-        cidr_layout.addWidget(QLabel("CIDR:"))
-        self.cidr_input = QLineEdit()
-        self.cidr_input.setPlaceholderText("ex: 192.168.1.0/24")
-        cidr_layout.addWidget(self.cidr_input)
-        self.add_cidr_btn = QPushButton("+")
-        self.add_cidr_btn.setFixedWidth(30)
-        self.add_cidr_btn.clicked.connect(self.add_cidr)
-        cidr_layout.addWidget(self.add_cidr_btn)
-        layout.addLayout(cidr_layout)
+        help_label = QLabel("Formats: 192.168.1.1 | 192.168.1.1-254 | 192.168.1.0/24 | ip1,ip2,ip3")
+        help_label.setStyleSheet("color: #666; font-size: 10px; font-style: italic;")
+        layout.addWidget(help_label)
 
         layout.addWidget(QLabel("IPs à scanner:"))
         self.ip_list = QListWidget()
@@ -1444,76 +1429,39 @@ class PortScannerApp(QMainWindow):
                 f"Chemin du dossier:\n{profiles_dir}"
             )
 
-    def add_single_ip(self):
-        ip = self.ip_input.text().strip()
-        if ip:
-            try:
-                ipaddress.ip_address(ip)
-                if not self.ip_exists(ip):
-                    self.ip_list.addItem(ip)
-                self.ip_input.clear()
-            except ValueError:
-                QMessageBox.warning(self, "Erreur", f"Adresse IP invalide: {ip}")
+    def add_ips(self):
+        """Ajoute des IPs depuis le champ unique (détection auto du format)."""
+        text = self.ip_input.text().strip()
+        if not text:
+            return
 
-    def add_ip_range(self):
-        start = self.ip_range_start.text().strip()
-        end = self.ip_range_end.text().strip()
+        # Utilise la fonction parse_ip_argument qui gère tous les formats
+        ips = parse_ip_argument(text)
 
-        try:
-            start_ip = ipaddress.ip_address(start)
-            end_ip = ipaddress.ip_address(end)
+        if not ips:
+            QMessageBox.warning(self, "Erreur", f"Aucune adresse IP valide trouvée dans: {text}")
+            return
 
-            if start_ip > end_ip:
-                start_ip, end_ip = end_ip, start_ip
+        # Confirmation si beaucoup d'IPs
+        if len(ips) > 256:
+            reply = QMessageBox.question(
+                self, "Confirmation",
+                f"Vous allez ajouter {len(ips)} adresses IP. Continuer?",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.No:
+                return
 
-            count = int(end_ip) - int(start_ip) + 1
-            if count > 256:
-                reply = QMessageBox.question(
-                    self, "Confirmation",
-                    f"Vous allez ajouter {count} adresses IP. Continuer?",
-                    QMessageBox.Yes | QMessageBox.No
-                )
-                if reply == QMessageBox.No:
-                    return
+        added = 0
+        for ip in ips:
+            if not self.ip_exists(ip):
+                self.ip_list.addItem(ip)
+                added += 1
 
-            current = start_ip
-            while current <= end_ip:
-                ip_str = str(current)
-                if not self.ip_exists(ip_str):
-                    self.ip_list.addItem(ip_str)
-                current = ipaddress.ip_address(int(current) + 1)
+        self.ip_input.clear()
 
-            self.ip_range_start.clear()
-            self.ip_range_end.clear()
-
-        except ValueError as e:
-            QMessageBox.warning(self, "Erreur", f"Plage IP invalide: {e}")
-
-    def add_cidr(self):
-        cidr = self.cidr_input.text().strip()
-
-        try:
-            network = ipaddress.ip_network(cidr, strict=False)
-            hosts = list(network.hosts())
-
-            if len(hosts) > 256:
-                reply = QMessageBox.question(
-                    self, "Confirmation",
-                    f"Vous allez ajouter {len(hosts)} adresses IP. Continuer?",
-                    QMessageBox.Yes | QMessageBox.No
-                )
-                if reply == QMessageBox.No:
-                    return
-
-            for host in hosts:
-                ip_str = str(host)
-                if not self.ip_exists(ip_str):
-                    self.ip_list.addItem(ip_str)
-
-            self.cidr_input.clear()
-
-        except ValueError as e:
-            QMessageBox.warning(self, "Erreur", f"CIDR invalide: {e}")
+        if added > 0:
+            self.status_label.setText(f"{added} IP(s) ajoutée(s)")
 
     def ip_exists(self, ip: str) -> bool:
         for i in range(self.ip_list.count()):
