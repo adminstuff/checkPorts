@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Port Scanner Tool with PyQt5 GUI and CLI mode
-Outil de scan de ports réseau avec interface graphique et mode ligne de commande
+Outil de scan de ports réseau avec interface graphique (PyQt5) et mode CLI.
 
 Usage CLI:
     python port_scanner.py --cli --profile "Web Standard" --ip 192.168.1.1
@@ -20,7 +19,6 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass, asdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Mode CLI: ne pas charger PyQt5 si --cli est utilisé
 CLI_MODE = '--cli' in sys.argv or '-c' in sys.argv
 
 if not CLI_MODE:
@@ -42,7 +40,6 @@ if not CLI_MODE:
 else:
     GUI_AVAILABLE = False
 
-# ReportLab pour PDF (optionnel en mode CLI)
 try:
     from reportlab.lib import colors as rl_colors
     from reportlab.lib.pagesizes import A4
@@ -59,7 +56,6 @@ except ImportError:
 
 @dataclass
 class ScanResult:
-    """Résultat d'un scan de port"""
     ip: str
     port: int
     is_open: bool
@@ -69,7 +65,6 @@ class ScanResult:
 
 @dataclass
 class Profile:
-    """Profil de configuration"""
     name: str
     ports: List[int]
     ips: List[str]
@@ -77,7 +72,6 @@ class Profile:
     threads: int = 20
 
 
-# Ports communs avec leurs services
 COMMON_PORTS = {
     20: "FTP-DATA",
     21: "FTP",
@@ -101,7 +95,6 @@ COMMON_PORTS = {
     8443: "HTTPS-Alt"
 }
 
-# Profils prédéfinis
 DEFAULT_PROFILES = {
     "Web Standard": Profile(
         name="Web Standard",
@@ -137,18 +130,10 @@ DEFAULT_PROFILES = {
 
 
 def get_profiles_dir() -> str:
-    """Retourne le chemin du dossier des profils"""
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles")
 
 
-def get_config_path() -> str:
-    """Retourne le chemin du fichier de configuration de l'outil"""
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
-
-
 def sanitize_filename(name: str) -> str:
-    """Convertit un nom de profil en nom de fichier valide"""
-    # Remplacer les caractères invalides
     invalid_chars = '<>:"/\\|?*'
     filename = name
     for char in invalid_chars:
@@ -157,7 +142,7 @@ def sanitize_filename(name: str) -> str:
 
 
 def profile_to_file_content(profile: Profile) -> str:
-    """Convertit un profil en contenu de fichier .profil lisible"""
+    """Sérialise un profil au format texte .profil (clé = valeur, commentaires #)."""
     lines = [
         "# Fichier de profil Port Scanner",
         "# Modifiable manuellement - les lignes commencant par # sont ignorees",
@@ -182,7 +167,7 @@ def profile_to_file_content(profile: Profile) -> str:
 
 
 def parse_profile_file(filepath: str) -> Optional[Profile]:
-    """Parse un fichier .profil et retourne un objet Profile"""
+    """Lit un fichier .profil et retourne un objet Profile, ou None si invalide."""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -190,20 +175,14 @@ def parse_profile_file(filepath: str) -> Optional[Profile]:
         data = {}
         for line in content.split('\n'):
             line = line.strip()
-            # Ignorer les commentaires et lignes vides
             if not line or line.startswith('#'):
                 continue
-
             if '=' in line:
                 key, value = line.split('=', 1)
-                key = key.strip()
-                value = value.strip()
-                data[key] = value
+                data[key.strip()] = value.strip()
 
-        # Parser les valeurs
         name = data.get('name', os.path.splitext(os.path.basename(filepath))[0])
 
-        # Parser les ports
         ports_str = data.get('ports', '')
         ports = []
         if ports_str:
@@ -214,15 +193,9 @@ def parse_profile_file(filepath: str) -> Optional[Profile]:
                     except ValueError:
                         pass
 
-        # Parser les IPs
         ips_str = data.get('ips', '')
-        ips = []
-        if ips_str:
-            for ip in ips_str.replace(' ', '').split(','):
-                if ip:
-                    ips.append(ip)
+        ips = [ip for ip in ips_str.replace(' ', '').split(',') if ip] if ips_str else []
 
-        # Parser timeout et threads
         timeout = int(data.get('timeout', 2))
         threads = int(data.get('threads', 20))
 
@@ -233,10 +206,7 @@ def parse_profile_file(filepath: str) -> Optional[Profile]:
 
 
 def save_profile_to_file(profile: Profile, is_default: bool = False) -> bool:
-    """Sauvegarde un profil dans un fichier .profil"""
     profiles_dir = get_profiles_dir()
-
-    # Creer le dossier si necessaire
     os.makedirs(profiles_dir, exist_ok=True)
 
     filename = sanitize_filename(profile.name) + ".profil"
@@ -245,7 +215,6 @@ def save_profile_to_file(profile: Profile, is_default: bool = False) -> bool:
     try:
         content = profile_to_file_content(profile)
         if is_default:
-            # Ajouter un marqueur pour les profils par defaut
             content = "# [PROFIL PAR DEFAUT]\n" + content
 
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -256,7 +225,6 @@ def save_profile_to_file(profile: Profile, is_default: bool = False) -> bool:
 
 
 def delete_profile_file(profile_name: str) -> bool:
-    """Supprime le fichier d'un profil"""
     profiles_dir = get_profiles_dir()
     filename = sanitize_filename(profile_name) + ".profil"
     filepath = os.path.join(profiles_dir, filename)
@@ -270,7 +238,6 @@ def delete_profile_file(profile_name: str) -> bool:
 
 
 def is_default_profile_file(filepath: str) -> bool:
-    """Verifie si un fichier profil est marque comme profil par defaut"""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             first_line = f.readline()
@@ -280,22 +247,19 @@ def is_default_profile_file(filepath: str) -> bool:
 
 
 def init_default_profiles():
-    """Initialise les fichiers des profils par defaut s'ils n'existent pas"""
+    """Crée les fichiers .profil par défaut s'ils n'existent pas encore."""
     profiles_dir = get_profiles_dir()
     os.makedirs(profiles_dir, exist_ok=True)
 
     for name, profile in DEFAULT_PROFILES.items():
         filename = sanitize_filename(name) + ".profil"
         filepath = os.path.join(profiles_dir, filename)
-
-        # Ne creer le fichier que s'il n'existe pas
         if not os.path.exists(filepath):
             save_profile_to_file(profile, is_default=True)
 
 
 def load_profiles() -> Dict[str, Profile]:
-    """Charge tous les profils depuis les fichiers .profil"""
-    # D'abord, s'assurer que les profils par defaut existent
+    """Charge tous les profils depuis le dossier profiles/."""
     init_default_profiles()
 
     profiles = {}
@@ -312,20 +276,11 @@ def load_profiles() -> Dict[str, Profile]:
     return profiles
 
 
-def save_profiles(profiles: Dict[str, Profile]):
-    """Sauvegarde tous les profils (pour compatibilite - utiliser save_profile_to_file)"""
-    # Cette fonction est gardee pour compatibilite mais ne fait rien
-    # car chaque profil est sauvegarde individuellement
-    pass
-
-
 def get_default_profile_names() -> List[str]:
-    """Retourne la liste des noms des profils par defaut"""
     return list(DEFAULT_PROFILES.keys())
 
 
 def get_service_name(port: int) -> str:
-    """Retourne le nom du service pour un port donné"""
     if port in COMMON_PORTS:
         return COMMON_PORTS[port]
     try:
@@ -335,7 +290,6 @@ def get_service_name(port: int) -> str:
 
 
 def get_local_ip() -> str:
-    """Récupère l'adresse IP locale"""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -347,7 +301,7 @@ def get_local_ip() -> str:
 
 
 def scan_port(ip: str, port: int, timeout: float = 1.0) -> ScanResult:
-    """Scanne un port sur une adresse IP"""
+    """Teste la connectivité TCP sur un port et retourne le résultat."""
     start_time = datetime.now()
     is_open = False
 
@@ -366,12 +320,11 @@ def scan_port(ip: str, port: int, timeout: float = 1.0) -> ScanResult:
     return ScanResult(ip, port, is_open, service, response_time)
 
 
-# =============================================================================
-# MODE CLI - Défini avant les classes GUI pour éviter les imports PyQt5
-# =============================================================================
+# Le code CLI est placé avant les classes GUI pour que `sys.exit(run_cli())`
+# s'exécute avant que Python ne tente de résoudre les références à PyQt5.
 
 def parse_ip_argument(ip_arg: str) -> List[str]:
-    """Parse un argument IP (unique, plage ou CIDR) et retourne une liste d'IPs"""
+    """Parse une chaîne IP (unique, plage, CIDR ou liste CSV) en liste d'adresses."""
     ips = []
 
     for part in ip_arg.split(','):
@@ -379,7 +332,6 @@ def parse_ip_argument(ip_arg: str) -> List[str]:
         if not part:
             continue
 
-        # CIDR notation
         if '/' in part:
             try:
                 network = ipaddress.ip_network(part, strict=False)
@@ -388,11 +340,10 @@ def parse_ip_argument(ip_arg: str) -> List[str]:
             except ValueError as e:
                 print(f"[ERREUR] CIDR invalide '{part}': {e}", file=sys.stderr)
 
-        # Plage IP (192.168.1.1-192.168.1.10)
         elif '-' in part and part.count('-') == 1 and not part.startswith('-'):
             try:
                 start_str, end_str = part.split('-')
-                # Gérer le format court: 192.168.1.1-10
+                # Format court : 192.168.1.1-10 -> 192.168.1.1-192.168.1.10
                 if '.' not in end_str:
                     base = '.'.join(start_str.split('.')[:-1])
                     end_str = f"{base}.{end_str}"
@@ -410,7 +361,6 @@ def parse_ip_argument(ip_arg: str) -> List[str]:
             except ValueError as e:
                 print(f"[ERREUR] Plage IP invalide '{part}': {e}", file=sys.stderr)
 
-        # IP unique
         else:
             try:
                 ipaddress.ip_address(part)
@@ -422,7 +372,7 @@ def parse_ip_argument(ip_arg: str) -> List[str]:
 
 
 def parse_ports_argument(ports_arg: str) -> List[int]:
-    """Parse un argument ports et retourne une liste de ports"""
+    """Parse une chaîne de ports (unique, plage, liste CSV) en liste triée."""
     ports = []
 
     for part in ports_arg.split(','):
@@ -430,7 +380,6 @@ def parse_ports_argument(ports_arg: str) -> List[int]:
         if not part:
             continue
 
-        # Plage de ports (80-443)
         if '-' in part:
             try:
                 start, end = part.split('-')
@@ -456,7 +405,6 @@ def parse_ports_argument(ports_arg: str) -> List[int]:
 
 def cli_scan(ips: List[str], ports: List[int], timeout: float, threads: int,
              show_closed: bool = False, quiet: bool = False) -> List[ScanResult]:
-    """Execute un scan en mode CLI avec affichage progressif"""
     results = []
     total = len(ips) * len(ports)
     completed = 0
@@ -500,7 +448,6 @@ def cli_scan(ips: List[str], ports: List[int], timeout: float, threads: int,
 
             completed += 1
 
-            # Afficher la progression tous les 10%
             if not quiet and total > 10:
                 progress = int((completed / total) * 100)
                 if completed % max(1, total // 10) == 0:
@@ -520,7 +467,6 @@ def cli_scan(ips: List[str], ports: List[int], timeout: float, threads: int,
 
 
 def export_results_json(results: List[ScanResult], filename: str, only_open: bool = False):
-    """Exporte les résultats en JSON"""
     if only_open:
         results = [r for r in results if r.is_open]
 
@@ -538,7 +484,6 @@ def export_results_json(results: List[ScanResult], filename: str, only_open: boo
 
 
 def export_results_csv(results: List[ScanResult], filename: str, only_open: bool = False):
-    """Exporte les résultats en CSV"""
     if only_open:
         results = [r for r in results if r.is_open]
 
@@ -553,7 +498,6 @@ def export_results_csv(results: List[ScanResult], filename: str, only_open: bool
 
 
 def export_results_text(results: List[ScanResult], filename: str, only_open: bool = False):
-    """Exporte les résultats en texte"""
     if only_open:
         results = [r for r in results if r.is_open]
 
@@ -582,7 +526,6 @@ def export_results_text(results: List[ScanResult], filename: str, only_open: boo
 
 def generate_pdf_report_cli(results: List[ScanResult], filename: str,
                             timeout: int, threads: int, only_open: bool = False):
-    """Génère un rapport PDF en mode CLI"""
     if not PDF_AVAILABLE:
         print("[ERREUR] ReportLab non installé.", file=sys.stderr)
         return
@@ -619,14 +562,10 @@ def generate_pdf_report_cli(results: List[ScanResult], filename: str,
     )
 
     elements = []
-
-    # Titre
     elements.append(Paragraph("Rapport de Scan de Ports", title_style))
     elements.append(Spacer(1, 20))
 
-    # Informations
     elements.append(Paragraph("Informations générales", heading_style))
-
     scan_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     source_ip = get_local_ip()
     filter_text = "Ports ouverts uniquement" if only_open else "Tous"
@@ -639,7 +578,6 @@ def generate_pdf_report_cli(results: List[ScanResult], filename: str,
         ["Filtre:", filter_text],
         ["Mode:", "CLI"]
     ]
-
     info_table = Table(info_data, colWidths=[4*cm, 10*cm])
     info_table.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
@@ -649,7 +587,6 @@ def generate_pdf_report_cli(results: List[ScanResult], filename: str,
     ]))
     elements.append(info_table)
 
-    # Statistiques
     elements.append(Paragraph("Statistiques", heading_style))
 
     total = len(results)
@@ -668,8 +605,6 @@ def generate_pdf_report_cli(results: List[ScanResult], filename: str,
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
     ]))
     elements.append(stats_table)
-
-    # Résultats
     elements.append(Paragraph("Résultats détaillés", heading_style))
 
     table_data = [["IP", "Port", "Service", "Statut", "Temps (ms)"]]
@@ -681,7 +616,6 @@ def generate_pdf_report_cli(results: List[ScanResult], filename: str,
         table_data.append([result.ip, str(result.port), result.service, status, time_str])
 
     results_table = Table(table_data, colWidths=[3.5*cm, 1.5*cm, 3*cm, 2*cm, 2*cm])
-
     table_style = [
         ('BACKGROUND', (0, 0), (-1, 0), rl_colors.HexColor('#2196F3')),
         ('TEXTCOLOR', (0, 0), (-1, 0), rl_colors.white),
@@ -694,6 +628,7 @@ def generate_pdf_report_cli(results: List[ScanResult], filename: str,
         ('TOPPADDING', (0, 0), (-1, -1), 6),
     ]
 
+    # Couleurs conditionnelles par statut ouvert/fermé
     for i, result in enumerate(sorted_results, start=1):
         if result.is_open:
             table_style.append(('BACKGROUND', (3, i), (3, i), rl_colors.HexColor('#c8e6c9')))
