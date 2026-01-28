@@ -645,7 +645,6 @@ def generate_pdf_report_cli(results: List[ScanResult], filename: str,
 
 
 def list_profiles_cli():
-    """Affiche la liste des profils disponibles"""
     profiles = load_profiles()
     default_names = get_default_profile_names()
 
@@ -679,7 +678,6 @@ def list_profiles_cli():
 
 
 def run_cli():
-    """Execute le mode CLI"""
     parser = argparse.ArgumentParser(
         description="Port Scanner - Outil de scan de ports réseau",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -728,12 +726,10 @@ Exemples:
 
     args = parser.parse_args()
 
-    # Lister les profils
     if args.list_profiles:
         list_profiles_cli()
         return 0
 
-    # Charger le profil si spécifié
     ips = []
     ports = []
     timeout = args.timeout
@@ -755,7 +751,6 @@ Exemples:
         if not args.quiet:
             print(f"[INFO] Profil '{args.profile}' chargé")
 
-    # Surcharger avec les arguments CLI
     if args.ip:
         ips = parse_ip_argument(args.ip)
 
@@ -768,7 +763,6 @@ Exemples:
     if args.threads != 20:
         threads = args.threads
 
-    # Vérifier les paramètres
     if not ips:
         print("[ERREUR] Aucune adresse IP spécifiée.", file=sys.stderr)
         print("Utilisez --ip ou --profile avec des IPs définies.", file=sys.stderr)
@@ -779,11 +773,9 @@ Exemples:
         print("Utilisez --ports ou --profile.", file=sys.stderr)
         return 1
 
-    # Exécuter le scan
     results = cli_scan(ips, ports, timeout, threads,
                        show_closed=args.show_closed, quiet=args.quiet)
 
-    # Exporter si demandé
     if args.output:
         ext = os.path.splitext(args.output)[1].lower()
 
@@ -804,12 +796,11 @@ Exemples:
             print("Formats supportés: .json, .csv, .txt, .pdf", file=sys.stderr)
             return 1
 
-    # Code de retour basé sur les résultats
+    # Exit codes : 0 = ports ouverts trouvés, 2 = aucun port ouvert
     open_count = sum(1 for r in results if r.is_open)
-    return 0 if open_count > 0 else 2  # 2 = aucun port ouvert trouvé
+    return 0 if open_count > 0 else 2
 
 
-# Exécuter le mode CLI immédiatement si demandé (avant le chargement des classes GUI)
 if CLI_MODE:
     sys.exit(run_cli())
 
