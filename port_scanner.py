@@ -859,9 +859,7 @@ class ScanWorker(QThread):
 
 
 class PortScannerApp(QMainWindow):
-    """Application principale de scan de ports"""
 
-    # Constantes pour les filtres
     FILTER_ALL = "all"
     FILTER_OPEN = "open"
     FILTER_CLOSED = "closed"
@@ -875,20 +873,17 @@ class PortScannerApp(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        """Initialise l'interface utilisateur"""
         self.setWindowTitle("Port Scanner - Outil de test de ports réseau")
         self.setMinimumSize(1100, 750)
 
-        # Widget central
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
 
-        # Splitter horizontal pour la configuration et les résultats
         splitter = QSplitter(Qt.Horizontal)
         main_layout.addWidget(splitter)
 
-        # Panneau de configuration (gauche) avec scroll
+        # Panneau gauche : configuration
         config_scroll = QScrollArea()
         config_scroll.setWidgetResizable(True)
         config_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -898,23 +893,11 @@ class PortScannerApp(QMainWindow):
         config_widget = QWidget()
         config_layout = QVBoxLayout(config_widget)
 
-        # Groupe Profils
-        profiles_group = self.create_profiles_group()
-        config_layout.addWidget(profiles_group)
+        config_layout.addWidget(self.create_profiles_group())
+        config_layout.addWidget(self.create_ip_group())
+        config_layout.addWidget(self.create_ports_group())
+        config_layout.addWidget(self.create_options_group())
 
-        # Groupe IP
-        ip_group = self.create_ip_group()
-        config_layout.addWidget(ip_group)
-
-        # Groupe Ports
-        ports_group = self.create_ports_group()
-        config_layout.addWidget(ports_group)
-
-        # Groupe Options
-        options_group = self.create_options_group()
-        config_layout.addWidget(options_group)
-
-        # Boutons d'action
         action_layout = QHBoxLayout()
 
         self.start_btn = QPushButton("Démarrer le scan")
@@ -958,19 +941,16 @@ class PortScannerApp(QMainWindow):
         action_layout.addWidget(self.stop_btn)
         config_layout.addLayout(action_layout)
 
-        # Barre de progression
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
         config_layout.addWidget(self.progress_bar)
 
-        # Label de statut
         self.status_label = QLabel("Prêt")
         self.status_label.setStyleSheet("color: #666; font-style: italic;")
         config_layout.addWidget(self.status_label)
 
         config_layout.addStretch()
 
-        # Bouton export PDF
         self.export_btn = QPushButton("Exporter en PDF")
         self.export_btn.setEnabled(False)
         self.export_btn.setStyleSheet("""
@@ -994,11 +974,10 @@ class PortScannerApp(QMainWindow):
         config_scroll.setWidget(config_widget)
         splitter.addWidget(config_scroll)
 
-        # Panneau des résultats (droite)
+        # Panneau droit : résultats
         results_widget = QWidget()
         results_layout = QVBoxLayout(results_widget)
 
-        # En-tête avec titre et filtres
         header_layout = QHBoxLayout()
 
         results_label = QLabel("Résultats du scan")
@@ -1007,7 +986,6 @@ class PortScannerApp(QMainWindow):
 
         header_layout.addStretch()
 
-        # Groupe de filtres
         filter_label = QLabel("Filtrer:")
         header_layout.addWidget(filter_label)
 
@@ -1033,7 +1011,6 @@ class PortScannerApp(QMainWindow):
 
         results_layout.addLayout(header_layout)
 
-        # Tableau des résultats
         self.results_table = QTableWidget()
         self.results_table.setColumnCount(5)
         self.results_table.setHorizontalHeaderLabels([
@@ -1051,7 +1028,6 @@ class PortScannerApp(QMainWindow):
         """)
         results_layout.addWidget(self.results_table)
 
-        # Statistiques
         stats_frame = QFrame()
         stats_frame.setFrameStyle(QFrame.StyledPanel)
         stats_layout = QHBoxLayout(stats_frame)
@@ -1076,11 +1052,9 @@ class PortScannerApp(QMainWindow):
         splitter.setSizes([400, 700])
 
     def create_profiles_group(self) -> QGroupBox:
-        """Crée le groupe de gestion des profils"""
         group = QGroupBox("Profils de configuration")
         layout = QVBoxLayout()
 
-        # Sélection du profil
         profile_select_layout = QHBoxLayout()
         profile_select_layout.addWidget(QLabel("Profil:"))
 
@@ -1089,7 +1063,6 @@ class PortScannerApp(QMainWindow):
         self.profile_combo.currentTextChanged.connect(self.on_profile_changed)
         profile_select_layout.addWidget(self.profile_combo, 1)
 
-        # Bouton menu pour les actions sur les profils
         self.profile_menu_btn = QToolButton()
         self.profile_menu_btn.setText("...")
         self.profile_menu_btn.setPopupMode(QToolButton.InstantPopup)
@@ -1129,7 +1102,6 @@ class PortScannerApp(QMainWindow):
 
         layout.addLayout(profile_select_layout)
 
-        # Bouton de chargement rapide
         self.load_profile_btn = QPushButton("Charger le profil sélectionné")
         self.load_profile_btn.clicked.connect(self.load_selected_profile)
         layout.addWidget(self.load_profile_btn)
@@ -1138,11 +1110,9 @@ class PortScannerApp(QMainWindow):
         return group
 
     def create_ip_group(self) -> QGroupBox:
-        """Crée le groupe de configuration des IPs"""
         group = QGroupBox("Adresses IP cibles")
         layout = QVBoxLayout()
 
-        # Champ IP unique
         ip_single_layout = QHBoxLayout()
         ip_single_layout.addWidget(QLabel("IP unique:"))
         self.ip_input = QLineEdit()
@@ -1154,7 +1124,6 @@ class PortScannerApp(QMainWindow):
         ip_single_layout.addWidget(self.add_ip_btn)
         layout.addLayout(ip_single_layout)
 
-        # Champ plage IP
         ip_range_layout = QHBoxLayout()
         ip_range_layout.addWidget(QLabel("Plage IP:"))
         self.ip_range_start = QLineEdit()
@@ -1170,7 +1139,6 @@ class PortScannerApp(QMainWindow):
         ip_range_layout.addWidget(self.add_range_btn)
         layout.addLayout(ip_range_layout)
 
-        # CIDR
         cidr_layout = QHBoxLayout()
         cidr_layout.addWidget(QLabel("CIDR:"))
         self.cidr_input = QLineEdit()
@@ -1182,7 +1150,6 @@ class PortScannerApp(QMainWindow):
         cidr_layout.addWidget(self.add_cidr_btn)
         layout.addLayout(cidr_layout)
 
-        # Liste des IPs avec scroll
         layout.addWidget(QLabel("IPs à scanner:"))
         self.ip_list = QListWidget()
         self.ip_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -1190,7 +1157,6 @@ class PortScannerApp(QMainWindow):
         self.ip_list.setMaximumHeight(120)
         layout.addWidget(self.ip_list)
 
-        # Boutons de gestion
         ip_btns_layout = QHBoxLayout()
         self.remove_ip_btn = QPushButton("Supprimer")
         self.remove_ip_btn.clicked.connect(self.remove_selected_ips)
@@ -1205,11 +1171,9 @@ class PortScannerApp(QMainWindow):
         return group
 
     def create_ports_group(self) -> QGroupBox:
-        """Crée le groupe de configuration des ports"""
         group = QGroupBox("Ports à tester")
         layout = QVBoxLayout()
 
-        # Ports prédéfinis dans un scroll area
         ports_scroll = QScrollArea()
         ports_scroll.setWidgetResizable(True)
         ports_scroll.setMaximumHeight(150)
@@ -1234,7 +1198,6 @@ class PortScannerApp(QMainWindow):
         ports_scroll.setWidget(ports_widget)
         layout.addWidget(ports_scroll)
 
-        # Boutons tout sélectionner / désélectionner
         select_btns_layout = QHBoxLayout()
         select_all_btn = QPushButton("Tout")
         select_all_btn.clicked.connect(lambda: self.select_all_ports(True))
@@ -1244,7 +1207,6 @@ class PortScannerApp(QMainWindow):
         select_btns_layout.addWidget(deselect_all_btn)
         layout.addLayout(select_btns_layout)
 
-        # Port personnalisé
         custom_layout = QHBoxLayout()
         custom_layout.addWidget(QLabel("Port:"))
         self.custom_port_input = QSpinBox()
@@ -1256,7 +1218,6 @@ class PortScannerApp(QMainWindow):
         custom_layout.addWidget(self.add_port_btn)
         layout.addLayout(custom_layout)
 
-        # Liste des ports personnalisés
         self.custom_ports_list = QListWidget()
         self.custom_ports_list.setMaximumHeight(50)
         self.custom_ports_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -1270,25 +1231,21 @@ class PortScannerApp(QMainWindow):
         return group
 
     def create_options_group(self) -> QGroupBox:
-        """Crée le groupe d'options"""
         group = QGroupBox("Options de scan")
         layout = QGridLayout()
 
-        # Timeout
         layout.addWidget(QLabel("Timeout (sec):"), 0, 0)
         self.timeout_input = QSpinBox()
         self.timeout_input.setRange(1, 30)
         self.timeout_input.setValue(2)
         layout.addWidget(self.timeout_input, 0, 1)
 
-        # Threads
         layout.addWidget(QLabel("Threads:"), 1, 0)
         self.threads_input = QSpinBox()
         self.threads_input.setRange(1, 100)
         self.threads_input.setValue(20)
         layout.addWidget(self.threads_input, 1, 1)
 
-        # IP source
         layout.addWidget(QLabel("IP source:"), 2, 0)
         self.source_ip_label = QLabel(get_local_ip())
         self.source_ip_label.setStyleSheet("font-weight: bold; color: #2196F3;")
@@ -1298,7 +1255,6 @@ class PortScannerApp(QMainWindow):
         return group
 
     def update_profile_combo(self):
-        """Met à jour la liste déroulante des profils"""
         current = self.profile_combo.currentText()
         self.profile_combo.clear()
         self.profile_combo.addItem("-- Sélectionner un profil --")
@@ -1321,11 +1277,9 @@ class PortScannerApp(QMainWindow):
             self.profile_combo.setCurrentIndex(idx)
 
     def on_profile_changed(self, text: str):
-        """Appelé quand un profil est sélectionné"""
-        pass  # Action sur double-clic ou bouton charger
+        pass  # Le chargement se fait via le bouton, pas au changement de sélection
 
     def get_profile_name_from_combo(self) -> Optional[str]:
-        """Extrait le nom du profil depuis le combo"""
         text = self.profile_combo.currentText()
         if text.startswith("[Défaut] "):
             return text[9:]
@@ -1334,7 +1288,6 @@ class PortScannerApp(QMainWindow):
         return None
 
     def load_selected_profile(self):
-        """Charge le profil sélectionné"""
         name = self.get_profile_name_from_combo()
         if not name or name not in self.profiles:
             QMessageBox.warning(self, "Erreur", "Veuillez sélectionner un profil valide.")
@@ -1342,10 +1295,8 @@ class PortScannerApp(QMainWindow):
 
         profile = self.profiles[name]
 
-        # Charger les ports
         self.select_all_ports(False)
         self.custom_ports_list.clear()
-
         for port in profile.ports:
             if port in self.port_checkboxes:
                 self.port_checkboxes[port].setChecked(True)
@@ -1353,19 +1304,16 @@ class PortScannerApp(QMainWindow):
                 service = get_service_name(port)
                 self.custom_ports_list.addItem(f"{port} ({service})")
 
-        # Charger les IPs
         self.ip_list.clear()
         for ip in profile.ips:
             self.ip_list.addItem(ip)
 
-        # Charger les options
         self.timeout_input.setValue(profile.timeout)
         self.threads_input.setValue(profile.threads)
 
         self.status_label.setText(f"Profil '{name}' chargé")
 
     def save_new_profile(self):
-        """Sauvegarde la configuration actuelle comme nouveau profil"""
         name, ok = QInputDialog.getText(
             self, "Nouveau profil",
             "Nom du profil:"
@@ -1393,12 +1341,10 @@ class PortScannerApp(QMainWindow):
             threads=self.threads_input.value()
         )
 
-        # Sauvegarder dans un fichier .profil
         if save_profile_to_file(profile, is_default=False):
             self.profiles[name] = profile
             self.update_profile_combo()
 
-            # Sélectionner le nouveau profil
             idx = self.profile_combo.findText(f"[Perso] {name}")
             if idx >= 0:
                 self.profile_combo.setCurrentIndex(idx)
@@ -1414,7 +1360,6 @@ class PortScannerApp(QMainWindow):
             QMessageBox.critical(self, "Erreur", "Impossible de sauvegarder le profil.")
 
     def update_current_profile(self):
-        """Met à jour le profil actuellement sélectionné"""
         name = self.get_profile_name_from_combo()
         default_names = get_default_profile_names()
 
@@ -1438,7 +1383,6 @@ class PortScannerApp(QMainWindow):
             threads=self.threads_input.value()
         )
 
-        # Sauvegarder dans le fichier .profil
         if save_profile_to_file(profile, is_default=False):
             self.profiles[name] = profile
             QMessageBox.information(self, "Succès", f"Profil '{name}' mis à jour.")
@@ -1446,7 +1390,6 @@ class PortScannerApp(QMainWindow):
             QMessageBox.critical(self, "Erreur", "Impossible de mettre à jour le profil.")
 
     def delete_profile(self):
-        """Supprime le profil sélectionné"""
         name = self.get_profile_name_from_combo()
         default_names = get_default_profile_names()
 
@@ -1468,7 +1411,6 @@ class PortScannerApp(QMainWindow):
         )
 
         if reply == QMessageBox.Yes:
-            # Supprimer le fichier .profil
             if delete_profile_file(name):
                 del self.profiles[name]
                 self.update_profile_combo()
@@ -1477,13 +1419,11 @@ class PortScannerApp(QMainWindow):
                 QMessageBox.critical(self, "Erreur", "Impossible de supprimer le fichier du profil.")
 
     def reload_profiles(self):
-        """Recharge tous les profils depuis les fichiers .profil"""
         self.profiles = load_profiles()
         self.update_profile_combo()
         self.status_label.setText(f"Profils rechargés ({len(self.profiles)} profils)")
 
     def open_profiles_folder(self):
-        """Ouvre le dossier des profils dans l'explorateur de fichiers"""
         import subprocess
         import platform
 
@@ -1505,7 +1445,6 @@ class PortScannerApp(QMainWindow):
             )
 
     def add_single_ip(self):
-        """Ajoute une IP unique à la liste"""
         ip = self.ip_input.text().strip()
         if ip:
             try:
@@ -1517,7 +1456,6 @@ class PortScannerApp(QMainWindow):
                 QMessageBox.warning(self, "Erreur", f"Adresse IP invalide: {ip}")
 
     def add_ip_range(self):
-        """Ajoute une plage d'IPs"""
         start = self.ip_range_start.text().strip()
         end = self.ip_range_end.text().strip()
 
@@ -1552,7 +1490,6 @@ class PortScannerApp(QMainWindow):
             QMessageBox.warning(self, "Erreur", f"Plage IP invalide: {e}")
 
     def add_cidr(self):
-        """Ajoute des IPs depuis une notation CIDR"""
         cidr = self.cidr_input.text().strip()
 
         try:
@@ -1579,32 +1516,26 @@ class PortScannerApp(QMainWindow):
             QMessageBox.warning(self, "Erreur", f"CIDR invalide: {e}")
 
     def ip_exists(self, ip: str) -> bool:
-        """Vérifie si une IP est déjà dans la liste"""
         for i in range(self.ip_list.count()):
             if self.ip_list.item(i).text() == ip:
                 return True
         return False
 
     def remove_selected_ips(self):
-        """Supprime les IPs sélectionnées"""
         for item in self.ip_list.selectedItems():
             self.ip_list.takeItem(self.ip_list.row(item))
 
     def select_all_ports(self, select: bool):
-        """Sélectionne ou désélectionne tous les ports"""
         for cb in self.port_checkboxes.values():
             cb.setChecked(select)
 
     def add_custom_port(self):
-        """Ajoute un port personnalisé"""
         port = self.custom_port_input.value()
 
-        # Vérifier si déjà dans les ports communs
         if port in self.port_checkboxes:
             self.port_checkboxes[port].setChecked(True)
             return
 
-        # Vérifier si déjà dans la liste personnalisée
         for i in range(self.custom_ports_list.count()):
             if int(self.custom_ports_list.item(i).text().split()[0]) == port:
                 return
@@ -1613,20 +1544,16 @@ class PortScannerApp(QMainWindow):
         self.custom_ports_list.addItem(f"{port} ({service})")
 
     def remove_custom_ports(self):
-        """Supprime les ports personnalisés sélectionnés"""
         for item in self.custom_ports_list.selectedItems():
             self.custom_ports_list.takeItem(self.custom_ports_list.row(item))
 
     def get_selected_ports(self) -> List[int]:
-        """Retourne la liste des ports sélectionnés"""
         ports = []
 
-        # Ports communs cochés
         for port, cb in self.port_checkboxes.items():
             if cb.isChecked():
                 ports.append(port)
 
-        # Ports personnalisés
         for i in range(self.custom_ports_list.count()):
             port_text = self.custom_ports_list.item(i).text()
             port = int(port_text.split()[0])
@@ -1636,19 +1563,16 @@ class PortScannerApp(QMainWindow):
         return sorted(ports)
 
     def get_target_ips(self) -> List[str]:
-        """Retourne la liste des IPs cibles"""
         ips = []
         for i in range(self.ip_list.count()):
             ips.append(self.ip_list.item(i).text())
         return ips
 
     def apply_filter(self, filter_type: str):
-        """Applique un filtre sur les résultats affichés"""
         self.current_filter = filter_type
         self.refresh_results_table()
 
     def get_filtered_results(self) -> List[ScanResult]:
-        """Retourne les résultats filtrés selon le filtre actuel"""
         if self.current_filter == self.FILTER_ALL:
             return self.scan_results
         elif self.current_filter == self.FILTER_OPEN:
@@ -1658,7 +1582,6 @@ class PortScannerApp(QMainWindow):
         return self.scan_results
 
     def refresh_results_table(self):
-        """Rafraîchit le tableau avec les résultats filtrés"""
         self.results_table.setRowCount(0)
 
         filtered = self.get_filtered_results()
@@ -1670,24 +1593,19 @@ class PortScannerApp(QMainWindow):
         self.update_stats()
 
     def add_result_row(self, result: ScanResult):
-        """Ajoute une ligne au tableau des résultats"""
         row = self.results_table.rowCount()
         self.results_table.insertRow(row)
 
-        # IP
         ip_item = QTableWidgetItem(result.ip)
         self.results_table.setItem(row, 0, ip_item)
 
-        # Port
         port_item = QTableWidgetItem(str(result.port))
         port_item.setTextAlignment(Qt.AlignCenter)
         self.results_table.setItem(row, 1, port_item)
 
-        # Service
         service_item = QTableWidgetItem(result.service)
         self.results_table.setItem(row, 2, service_item)
 
-        # Statut
         status_item = QTableWidgetItem("OUVERT" if result.is_open else "FERMÉ")
         status_item.setTextAlignment(Qt.AlignCenter)
         if result.is_open:
@@ -1698,14 +1616,12 @@ class PortScannerApp(QMainWindow):
             status_item.setForeground(QColor("#c62828"))
         self.results_table.setItem(row, 3, status_item)
 
-        # Temps de réponse
         time_str = f"{result.response_time:.1f}" if result.response_time else "-"
         time_item = QTableWidgetItem(time_str)
         time_item.setTextAlignment(Qt.AlignCenter)
         self.results_table.setItem(row, 4, time_item)
 
     def start_scan(self):
-        """Démarre le scan"""
         ips = self.get_target_ips()
         ports = self.get_selected_ports()
 
@@ -1717,7 +1633,6 @@ class PortScannerApp(QMainWindow):
             QMessageBox.warning(self, "Erreur", "Veuillez sélectionner au moins un port.")
             return
 
-        # Réinitialiser
         self.results_table.setRowCount(0)
         self.scan_results.clear()
         self.progress_bar.setValue(0)
@@ -1725,12 +1640,10 @@ class PortScannerApp(QMainWindow):
         self.filter_all_rb.setChecked(True)
         self.update_stats()
 
-        # Désactiver les boutons
         self.start_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
         self.export_btn.setEnabled(False)
 
-        # Démarrer le worker
         timeout = self.timeout_input.value()
         threads = self.threads_input.value()
 
@@ -1742,10 +1655,8 @@ class PortScannerApp(QMainWindow):
         self.worker.start()
 
     def on_result_ready(self, result: ScanResult):
-        """Appelé quand un résultat est prêt"""
         self.scan_results.append(result)
 
-        # Ajouter au tableau si correspond au filtre
         if self.current_filter == self.FILTER_ALL:
             self.add_result_row(result)
         elif self.current_filter == self.FILTER_OPEN and result.is_open:
@@ -1756,13 +1667,11 @@ class PortScannerApp(QMainWindow):
         self.update_stats()
 
     def stop_scan(self):
-        """Arrête le scan en cours"""
         if self.worker:
             self.worker.stop()
             self.status_label.setText("Arrêt en cours...")
 
     def update_stats(self):
-        """Met à jour les statistiques"""
         total = len(self.scan_results)
         open_ports = sum(1 for r in self.scan_results if r.is_open)
         closed_ports = total - open_ports
@@ -1774,7 +1683,6 @@ class PortScannerApp(QMainWindow):
         self.stats_filtered.setText(f"Affichés: {filtered}")
 
     def scan_finished(self):
-        """Appelé quand le scan est terminé"""
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
         self.export_btn.setEnabled(len(self.scan_results) > 0)
@@ -1782,12 +1690,10 @@ class PortScannerApp(QMainWindow):
         self.progress_bar.setValue(100)
 
     def export_pdf(self):
-        """Exporte les résultats en PDF"""
         if not self.scan_results:
             QMessageBox.warning(self, "Erreur", "Aucun résultat à exporter.")
             return
 
-        # Demander quel filtre appliquer à l'export
         filter_options = ["Tous les résultats", "Ports ouverts uniquement", "Ports fermés uniquement"]
         current_idx = 0
         if self.current_filter == self.FILTER_OPEN:
@@ -1804,7 +1710,6 @@ class PortScannerApp(QMainWindow):
         if not ok:
             return
 
-        # Déterminer le filtre pour l'export
         if choice == filter_options[0]:
             export_filter = self.FILTER_ALL
         elif choice == filter_options[1]:
@@ -1831,7 +1736,6 @@ class PortScannerApp(QMainWindow):
             QMessageBox.critical(self, "Erreur", f"Erreur lors de l'export: {e}")
 
     def generate_pdf_report(self, filename: str, export_filter: str):
-        """Génère le rapport PDF"""
         doc = SimpleDocTemplate(
             filename,
             pagesize=A4,
@@ -1861,18 +1765,12 @@ class PortScannerApp(QMainWindow):
         normal_style = styles['Normal']
 
         elements = []
-
-        # Titre
         elements.append(Paragraph("Rapport de Scan de Ports", title_style))
         elements.append(Spacer(1, 20))
 
-        # Informations générales
         elements.append(Paragraph("Informations générales", heading_style))
-
         scan_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         source_ip = get_local_ip()
-
-        # Texte du filtre
         filter_text = "Tous"
         if export_filter == self.FILTER_OPEN:
             filter_text = "Ports ouverts uniquement"
@@ -1896,28 +1794,19 @@ class PortScannerApp(QMainWindow):
         ]))
         elements.append(info_table)
 
-        # IPs testées
         elements.append(Paragraph("Adresses IP testées", heading_style))
-
         tested_ips = sorted(set(r.ip for r in self.scan_results))
-        ip_text = ", ".join(tested_ips)
-        elements.append(Paragraph(ip_text, normal_style))
+        elements.append(Paragraph(", ".join(tested_ips), normal_style))
 
-        # Ports testés
         elements.append(Paragraph("Ports testés", heading_style))
-
         tested_ports = sorted(set(r.port for r in self.scan_results))
-        ports_text = ", ".join(str(p) for p in tested_ports)
-        elements.append(Paragraph(ports_text, normal_style))
+        elements.append(Paragraph(", ".join(str(p) for p in tested_ports), normal_style))
 
-        # Statistiques
         elements.append(Paragraph("Statistiques", heading_style))
-
         total = len(self.scan_results)
         open_count = sum(1 for r in self.scan_results if r.is_open)
         closed_count = total - open_count
 
-        # Résultats filtrés pour l'export
         if export_filter == self.FILTER_ALL:
             filtered_results = self.scan_results
         elif export_filter == self.FILTER_OPEN:
@@ -1940,13 +1829,8 @@ class PortScannerApp(QMainWindow):
         ]))
         elements.append(stats_table)
 
-        # Résultats détaillés
         elements.append(Paragraph("Résultats détaillés", heading_style))
-
-        # En-tête du tableau
         table_data = [["IP", "Port", "Service", "Statut", "Temps (ms)"]]
-
-        # Trier les résultats par IP puis par port
         sorted_results = sorted(filtered_results, key=lambda r: (r.ip, r.port))
 
         for result in sorted_results:
@@ -1961,8 +1845,6 @@ class PortScannerApp(QMainWindow):
             ])
 
         results_table = Table(table_data, colWidths=[3.5*cm, 1.5*cm, 3*cm, 2*cm, 2*cm])
-
-        # Style du tableau
         table_style = [
             ('BACKGROUND', (0, 0), (-1, 0), rl_colors.HexColor('#2196F3')),
             ('TEXTCOLOR', (0, 0), (-1, 0), rl_colors.white),
@@ -1975,7 +1857,6 @@ class PortScannerApp(QMainWindow):
             ('TOPPADDING', (0, 0), (-1, -1), 6),
         ]
 
-        # Colorer les lignes selon le statut
         for i, result in enumerate(sorted_results, start=1):
             if result.is_open:
                 table_style.append(('BACKGROUND', (3, i), (3, i), rl_colors.HexColor('#c8e6c9')))
@@ -1987,18 +1868,12 @@ class PortScannerApp(QMainWindow):
         results_table.setStyle(TableStyle(table_style))
         elements.append(results_table)
 
-        # Générer le PDF
         doc.build(elements)
 
 
 
 
-# =============================================================================
-# MODE GUI
-# =============================================================================
-
 def run_gui():
-    """Execute le mode GUI"""
     if not GUI_AVAILABLE:
         print("[ERREUR] PyQt5 non disponible.", file=sys.stderr)
         print("Installez avec: pip install PyQt5", file=sys.stderr)
@@ -2049,7 +1924,6 @@ def run_gui():
 
 
 def main():
-    """Point d'entrée principal"""
     if CLI_MODE:
         sys.exit(run_cli())
     else:
