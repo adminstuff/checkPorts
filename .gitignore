@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+checkports/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.exe
+release/
+
+# Reports (generated)
+rapport_scan_*.pdf
+rapport_scan_*.json
+rapport_scan_*.csv
+rapport_scan_*.txt
+
+# Config local
+config.json
+
+# Keep profiles directory but ignore local changes
+!profiles/
+profiles/*.profil
+!profiles/*.profil.example
